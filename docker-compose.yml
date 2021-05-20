@@ -1,4 +1,4 @@
-version: '3.7'
+version: "3.7"
 services:
     postgres:
         build: ./docker/postgres/
@@ -30,10 +30,20 @@ services:
         container_name: mvj
         restart: unless-stopped
 
+    ftp:
+        image: fauria/vsftpd
+        ports:
+            - "21:21"
+        environment:
+            PASV_ADDRESS: ftp
+            PASV_ADDR_RESOLVE: "YES"
+            FTP_USER: test
+            FTP_PASS: test
+            LOG_STDOUT: "true"
+
 volumes:
-        mvj-postgres-data-volume:
-        mvj-django-media-volume:
+    mvj-postgres-data-volume:
+    mvj-django-media-volume:
 networks:
     default:
         name: helsinki
-

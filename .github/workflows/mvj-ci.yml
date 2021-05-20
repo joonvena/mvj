@@ -1,6 +1,6 @@
 name: MVJ CI
 
-on: 
+on:
   push:
     branches: [master, develop]
   pull_request:
@@ -9,8 +9,8 @@ on:
 jobs:
   build:
     env:
-      DATABASE_URL: 'postgis://postgres:postgres@localhost/github_actions'
-    
+      DATABASE_URL: "postgis://postgres:postgres@localhost/github_actions"
+
     runs-on: ubuntu-18.04
     strategy:
       matrix:
@@ -23,10 +23,24 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: github_actions
-        ports: 
+        ports:
           - 5432:5432
         # needed because the postgres container does not provide a healthcheck
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      ftp:
+        image: fauria/vsftpd
+        env:
+          PASV_ADDRESS: localhost
+          PASV_ADDR_RESOLVE: "YES"
+          PASV_MIN_PORT: 21100
+          PASV_MAX_PORT: 21200
+          FTP_USER: test
+          FTP_PASS: test
+          LOG_STDOUT: "true"
+        ports:
+          - "21:21"
+          - "21100-21200:21100-21200"
 
     steps:
       - name: Checkout
@@ -47,19 +61,22 @@ jobs:
 
       - name: Check and run migrations
         env:
-          DATABASE_URL:  ${{ env.DATABASE_URL }}
-        run: | 
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: |
           python manage.py makemigrations --dry-run --check
           python manage.py migrate
 
       - name: Run black, flake8 and isort
-        run: | 
+        run: |
           black --check .
           flake8
           isort . --check-only --diff
 
       - name: Run tests
-        run: | 
+        env:
+          TEST_FTP_ACTIVE: 1
+          FTP_HOST: localhost
+        run: |
           pytest -ra -vvv --doctest-modules --cov=.
           ./run-type-checks
 
